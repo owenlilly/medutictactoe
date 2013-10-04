@@ -1,0 +1,12 @@
+﻿body {
+}
+
+.row .cell {
+    float: left;
+    border: 1px solid black;
+    height: 80px;
+    width: 80px;
+    font-size: 60px;
+    line-height: 80px;
+    text-align: center;
+}

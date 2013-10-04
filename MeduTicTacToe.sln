@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MeduTicTacToe", "MeduTicTacToe\MeduTicTacToe.csproj", "{93049042-EB7B-4E25-891C-965F8BC48065}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MeduTicTacToe.Tests", "MeduTicTacToe.Tests\MeduTicTacToe.Tests.csproj", "{8A81ADE3-1593-41FD-A61D-DBFFE4E1CBFD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{93049042-EB7B-4E25-891C-965F8BC48065}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{93049042-EB7B-4E25-891C-965F8BC48065}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{93049042-EB7B-4E25-891C-965F8BC48065}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{93049042-EB7B-4E25-891C-965F8BC48065}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A81ADE3-1593-41FD-A61D-DBFFE4E1CBFD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A81ADE3-1593-41FD-A61D-DBFFE4E1CBFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A81ADE3-1593-41FD-A61D-DBFFE4E1CBFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A81ADE3-1593-41FD-A61D-DBFFE4E1CBFD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
