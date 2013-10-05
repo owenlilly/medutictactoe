@@ -7,6 +7,10 @@ using System.Web.Mvc;
 using System.Web.Optimization;
 using System.Web.Routing;
 
+using AutoMapper;
+using MeduTicTacToe.Domain;
+using MeduTicTacToe.Models;
+
 namespace MeduTicTacToe
 {
     // Note: For instructions on enabling IIS6 or IIS7 classic mode, 
@@ -16,6 +20,8 @@ namespace MeduTicTacToe
     {
         protected void Application_Start()
         {
+            InitMappings();
+
             AreaRegistration.RegisterAllAreas();
 
             WebApiConfig.Register(GlobalConfiguration.Configuration);
@@ -23,6 +29,12 @@ namespace MeduTicTacToe
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
             AuthConfig.RegisterAuth();
+        }
+
+        private static void InitMappings()
+        {
+            Mapper.CreateMap<UserState, GameBoard>()
+                .ForMember(b => b.GameName, opt => opt.MapFrom(u => u.gameName));
         }
     }
 }

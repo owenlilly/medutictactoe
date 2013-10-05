@@ -1,13 +1,29 @@
 ﻿
 function TicTacToeCtrl($scope, $http) {
 
-    var isTurn = false;
+    var refreshInterval;
     var firstPlayerTurn = true;
-    var gameIsRunning = false;
     var playerLetter = '';
-    
-    $scope.gameName   = '';
-    $scope.playerName = '';
+    var gameOver = false;
+
+    $scope.userState = {
+        gameOver: false,
+        winCount: 0,
+        winnerName: '',
+        playerName: '',
+        gameName: '',
+        isTurn: false,
+        rows: $scope.rows
+    };
+
+    $scope.gameIsRunning = false;
+    $scope.turnName = $scope.gameIsRunning ? ($scope.userState.isTurn ? 'Your turn' : $scope.oppName+'\'s turn') : '';
+    $scope.controlsDisabled = false;
+    $scope.myScore = 0;
+    $scope.oppScore = 0;
+    $scope.gameName   = '--';
+    $scope.playerName = '--';
+    $scope.secondPlayerName = '--';
     $scope.rows = [
         [
             { 'id': 'A1', 'letter': '' },
@@ -27,10 +43,10 @@ function TicTacToeCtrl($scope, $http) {
     ];
 
     var startGameLoop = function () {
-        setInterval($scope.refreshCallBack, 500);
+        refreshInterval = setInterval($scope.refreshCallBack, 500);
     };
 
-    var updateState = function (column) {
+    var updateState = function(column) {
 
         if ($.trim(column.letter) != "")
             return;
@@ -38,22 +54,18 @@ function TicTacToeCtrl($scope, $http) {
         console.log('updating state...');
 
         column.letter = playerLetter;
-        
-        var newState = {
+
+        $scope.userState = {
             gameName: $scope.gameName,
-            firstPlayerTurn: firstPlayerTurn,
+            playerName: $scope.playerName,
+            isTurn: firstPlayerTurn,
             rows: $scope.rows
         };
 
-        $http.post('/home/UpdateGameState', newState)
+        $http.post('/home/UpdateGameState', $scope.userState)
             .success(function(data, status, headers, config) {
-                column.letter = playerLetter;
-                if (checkWin())
-                    alert('You won!');
-                
-                isTurn = false;
-                console.log('success!');
-                console.log(data);
+                gameOver = $scope.userState.gameOver = data.gameOver;
+                $scope.userState.isTurn = data.isTurn;
             })
             .error(function(data, status, headers, config) {
                 console.log('error');
@@ -64,33 +76,8 @@ function TicTacToeCtrl($scope, $http) {
             });
     };
 
-    var checkWin = function () {
-
-        var letter = playerLetter;
-
-        var textToLookFor = letter + letter + letter;
-        for (var count = 0; count < $scope.rows.length; count++) {
-            if ($scope.rows[count][0].letter + $scope.rows[count][1].letter + $scope.rows[count][2].letter == textToLookFor) {
-
-                return true;
-            }
-            if ($scope.rows[0][count].letter + $scope.rows[1][count].letter + $scope.rows[2][count].letter == textToLookFor) {
-
-                return true;
-            }
-        }
-        if ($scope.rows[0][0].letter + $scope.rows[1][1].letter + $scope.rows[2][2].letter == textToLookFor) {
-
-            return true;
-        }
-        if ($scope.rows[2][0].letter + $scope.rows[1][1].letter + $scope.rows[0][2].letter == textToLookFor) {
-
-            return true;
-        }
-        return false;
-    };
-
     $scope.refreshCallBack = function () {
+
         $http.get('/home/getcurrentstate?gameName=' + $scope.gameName + '&playerName=' + $scope.playerName)
                 .success(function (data, status, headers, config) {
                     console.log(data);
@@ -98,7 +85,19 @@ function TicTacToeCtrl($scope, $http) {
                     if ($.trim(data) == "" || data.rows.length == 0)
                         return;
 
-                    isTurn = data.isTurn;
+                    if (data.gameOver) {
+                        if ($.trim(data.winnerName) == $.trim($scope.playerName)) {
+                            $scope.rows = data.rows;
+                            alert('You won!');
+                        } else {
+                            $scope.rows = data.rows;
+                            alert('You lost!');
+                        }
+                        gameOver = $scope.userState.gameOver = true;
+                        clearInterval(refreshInterval);
+                        return;
+                    }
+                    $scope.userState.isTurn = data.isTurn;
                     $scope.rows = data.rows;
                 })
                 .error(function (data, status, headers, config) {
@@ -115,15 +114,18 @@ function TicTacToeCtrl($scope, $http) {
                  console.log(data);
 
                  if(data.isNewGame) {
-                     playerLetter = 'X';//data.session.Player1.PlayerLetter;
-                     isTurn = true;
+                     playerLetter = data.session.Player1.PlayerLetter;
+                    
+                     $scope.userState.isTurn = true;
                  } else {
-                     playerLetter = 'O';//data.session.Player2.PlayerLetter;
-                 }
+                     playerLetter = data.session.Player2.PlayerLetter;
 
+                 }
+                 
                  startGameLoop();
 
-                 gameIsRunning = true;
+                 $scope.controlsDisabled = true;
+                 $scope.gameIsRunning = true;
              })
             .error(function (data, status, headers, config) {
                 console.log('error');
@@ -131,12 +133,17 @@ function TicTacToeCtrl($scope, $http) {
     };
 
     $scope.markUserClick = function (column) {
-        if (!gameIsRunning) {
+        if ($scope.userState.gameOver) {
+            alert('Game over');
+            return;
+        }
+
+        if (!$scope.gameIsRunning) {
             alert('Please start or join a game!');
             return;
         }
 
-        if (!isTurn) {
+        if (!$scope.userState.isTurn) {
             alert('Please wait your turn');
             return;
         }

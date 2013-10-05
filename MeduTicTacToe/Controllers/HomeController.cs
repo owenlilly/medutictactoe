@@ -1,16 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web.Caching;
-using System.Web.Mvc;
+﻿using System.Web.Mvc;
 
+using MeduTicTacToe.Domain;
 using MeduTicTacToe.Models;
+using MeduTicTacToe.Repository;
 
 
 namespace MeduTicTacToe.Controllers
 {
     public class HomeController : Controller
     {
+        private readonly GameBoardRepository GameBoardRepo;
+
+        public HomeController()
+        {
+            GameBoardRepo = new GameBoardRepository();
+        }
+
         public ActionResult Index()
         {
             return View();
@@ -24,27 +29,33 @@ namespace MeduTicTacToe.Controllers
             if (string.IsNullOrWhiteSpace(gameName))
                 return null;
 
-            var session = GetFromCache(gameName);
+            var game = GameBoardRepo.GetGame(gameName);
 
-            if (session == null)
+            if (game == null)
                 return null;
 
             var isTurn = false;
 
-            if(session.Player1.PlayerName == playerName)
+            if(game.Player1.PlayerName == playerName)
             {
-                isTurn = session.Player1.IsPlayerTurn;
+                isTurn = game.Player1.IsPlayerTurn;
             }
-            else if (session.Player2.PlayerName == playerName)
+            else if (game.Player2.PlayerName == playerName)
             {
-                isTurn = session.Player2.IsPlayerTurn;
+                isTurn = game.Player2.IsPlayerTurn;
             }
 
-            var state = new GetStateModel
+            var player = GameBoardRepo.GetPlayer(gameName, playerName);
+
+            var state = new UserState
                             {
-                                isTurn = isTurn,
-                                gameName = session.GameName,
-                                rows = session.GameBoard.rows
+                                winnerName = game.WinnerName,
+                                gameOver   = game.GameOver,
+                                winCount   = player.WinCount,
+                                playerName = player.PlayerName,
+                                isTurn     = isTurn,
+                                gameName   = game.GameName,
+                                rows       = game.Rows.rows
                             };
 
             return new JsonResult
@@ -55,14 +66,14 @@ namespace MeduTicTacToe.Controllers
                        };
         }
 
-        public JsonResult UpdateGameState(NewState state)
+        public JsonResult UpdateGameState(UserState state)
         {
-            var gameName = state.gameName;
-            var session  = GetFromCache(state.gameName);
-
-            if (SessionIsValid(gameName, session))
+            if (GameBoardRepo.GameNameExists(state.gameName))
             {
-                if(session.Player2 == null)
+                var game   = GameBoardRepo.GetGame(state.gameName);
+                var player = GameBoardRepo.GetPlayer(state.gameName, state.playerName);
+
+                if (game.Player2 == null)
                 {
                     Response.StatusCode = 400;
                     Response.Write("Waiting for second player...");
@@ -70,16 +81,53 @@ namespace MeduTicTacToe.Controllers
                     return null;
                 }
 
-                session.Player1.IsPlayerTurn = !session.Player1.IsPlayerTurn;
-                session.Player2.IsPlayerTurn = !session.Player2.IsPlayerTurn;
+                game.Rows = new RowCollection
+                                {
+                                    rows = state.rows
+                                };
 
-                session.GameBoard = new GameBoard
-                                        {
-                                            rows = state.rows
-                                        };
+                if (CheckWin(game, player))
+                {
+                    state.winCount   = (player.WinCount += 1);
+                    state.winnerName = player.WinnerName = player.PlayerName;
+                    player.IsWinner  = true;
 
-                UpdateSession(state.gameName, session);
+                    state.gameOver  = game.GameOver = true;
+                    game.WinnerName = player.PlayerName;
+                }
+
+                if (game.GameOver)
+                {
+                    if (state.winnerName == game.Player1.PlayerName)
+                    {
+                        game.Player1.IsWinner = true;
+                        game.GameOver         = true;
+                    }
+                    else if (state.winnerName == game.Player2.PlayerName)
+                    {
+                        game.Player2.IsWinner = true;
+                        game.GameOver         = true;
+                    }
+                }
+                else
+                {
+                    game.Player1.IsPlayerTurn = !game.Player1.IsPlayerTurn;
+                    game.Player2.IsPlayerTurn = !game.Player2.IsPlayerTurn;
+
+                    state.isTurn = player.IsPlayerTurn;
+                }
+
+                GameBoardRepo.UpdateGameState(game);
+
+                return new JsonResult
+                       {
+                           ContentType = "application/json",
+                           Data = state
+                       };
             }
+
+            Response.StatusCode = 404;
+            Response.StatusDescription = "Game not found";
 
             return new JsonResult
                        {
@@ -90,9 +138,7 @@ namespace MeduTicTacToe.Controllers
 
         public JsonResult InitGame(RequestData data)
         {
-            var session = GetFromCache(data.gameName);
-
-            if(session == null)
+            if (!GameBoardRepo.GameNameExists(data.gameName))
             {
                 return NewGame(data.gameName, data.playerName, data.rows);
             }
@@ -102,28 +148,9 @@ namespace MeduTicTacToe.Controllers
 
         protected JsonResult NewGame(string gameName, string playerName, Cell[][] rows)
         {
-            var session = new SessionModel
-                              {
-                                  GameName = gameName,
-                                  Player1 = new Player
-                                                  {
-                                                      PlayerId = Guid.NewGuid().ToString(),
-                                                      PlayerName = playerName,
-                                                      PlayerLetter = "X",
-                                                      IsPlayerTurn = true
-                                                  },
-                                  GameBoard = new GameBoard
-                                                  {
-                                                      rows = new Cell[][]
-                                                                 {
-                                                                     new Cell[]{new Cell(), new Cell(), new Cell(), },
-                                                                     new Cell[]{new Cell(), new Cell(), new Cell(), },
-                                                                     new Cell[]{new Cell(), new Cell(), new Cell(), }
-                                                                 }
-                                                  }
-                              };
+            GameBoard board = null;
 
-            AddToCache(session.GameName, session);
+            GameBoardRepo.AddPlayerToGame(gameName, Player.CreatePlayer(playerName, "X", true), out board);
             
             return new JsonResult
                        {
@@ -131,34 +158,23 @@ namespace MeduTicTacToe.Controllers
                            Data = new
                                       {
                                           isNewGame = true,
-                                          session = session
+                                          session = board
                                       }
                        };
         }
 
         protected JsonResult AddSecondPlayer(string gameName, string playerName)
         {
-            var session = GetFromCache(gameName);
-            
-            if (SessionIsValid(gameName, session))
+            GameBoard board = null;
+
+            var playerAdded = GameBoardRepo.AddPlayerToGame(gameName, Player.CreatePlayer(playerName, "O", false), out board);
+
+            if(!playerAdded)
             {
-                if(session.Player1.PlayerName == playerName)
-                {
-                    Response.StatusCode = 400;
-                    Response.Write("A player with this name is already on the board...");
+                Response.StatusCode = 400;
+                Response.Write("A player with this name is already on the board...");
 
-                    return null;
-                }
-
-                session.Player2 = new Player
-                                        {
-                                            PlayerId     = Guid.NewGuid().ToString(),
-                                            PlayerLetter = "O",
-                                            PlayerName   = playerName,
-                                            IsPlayerTurn = false
-                                        };
-
-                UpdateSession(gameName, session);
+                return null;
             }
 
             return new JsonResult
@@ -167,52 +183,40 @@ namespace MeduTicTacToe.Controllers
                            Data = new
                                       {
                                           isNewGame = false,
-                                          session = session
+                                          session = board
                                       }
                        };;
         }
 
-        private SessionModel GetFromCache(string key)
+        private static bool CheckWin(GameBoard game, Player player)
         {
-            var cache = this.Request.RequestContext.HttpContext.Cache;
+            var letter = player.PlayerLetter;
+            var rows = game.Rows;
 
-            if (string.IsNullOrWhiteSpace(key))
-                return null;
-
-            return (SessionModel)cache.Get(key);
-        }
-
-        private bool SessionIsValid(string gameName, object session)
-        {
-            if (session == null)
+            var textToLookFor = letter + letter + letter;
+            var j = rows.rows.Length;
+            for (var i = 0; i < j; i++)
             {
-                Response.StatusCode = 404;
-                Response.Write("Game name --" + gameName + "-- was not found");
+                if (rows[i, 0].letter + rows[i, 1].letter + rows[i, 2].letter == textToLookFor)
+                {
+                    return true;
+                }
 
-                return false;
+                if (rows[0, i].letter + rows[1, i].letter + rows[2, i].letter == textToLookFor)
+                {
+                    return true;
+                }
+            }
+            if (rows[0, 0].letter + rows[1, 1].letter + rows[2, 2].letter == textToLookFor)
+            {
+                return true;
+            }
+            if (rows[2, 0].letter + rows[1, 1].letter + rows[0, 2].letter == textToLookFor)
+            {
+                return true;
             }
 
-            return true;
-        }
-
-        private void UpdateSession(string key, SessionModel sessionData)
-        {
-            RemoveFromCache(key);
-            AddToCache(key, sessionData);
-        }
-
-        private void RemoveFromCache(string key)
-        {
-            var cache = this.Request.RequestContext.HttpContext.Cache;
-
-            cache.Remove(key);
-        }
-
-        private void AddToCache(string key, object value)
-        {
-            var cache = this.Request.RequestContext.HttpContext.Cache;
-
-            cache.Add(key, value, null, Cache.NoAbsoluteExpiration, new TimeSpan(0, 0, 30, 0), CacheItemPriority.Normal, null);
+            return false;
         }
 
         #region Hidden
