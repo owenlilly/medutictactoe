@@ -21,9 +21,9 @@ function TicTacToeCtrl($scope, $http) {
     $scope.controlsDisabled = false;
     $scope.myScore = 0;
     $scope.oppScore = 0;
-    $scope.gameName   = '--';
-    $scope.playerName = '--';
-    $scope.secondPlayerName = '--';
+    $scope.gameName   = '';
+    $scope.playerName = '';
+    $scope.secondPlayerName = '';
     $scope.rows = [
         [
             { 'id': 'A1', 'letter': '' },
@@ -88,10 +88,10 @@ function TicTacToeCtrl($scope, $http) {
                     if (data.gameOver) {
                         if ($.trim(data.winnerName) == $.trim($scope.playerName)) {
                             $scope.rows = data.rows;
-                            alert('You won!');
+                            alert('You Won!');
                         } else {
                             $scope.rows = data.rows;
-                            alert('You lost!');
+                            alert('You Lost!');
                         }
                         gameOver = $scope.userState.gameOver = true;
                         clearInterval(refreshInterval);

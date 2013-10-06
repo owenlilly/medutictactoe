@@ -7,46 +7,34 @@
         <h1>Tic-Tac-Toe</h1>
     </div>
     <br /><br />
-    <div class="row-fluid">
-        <div class="span4">
-            <div class="form-horizontal">
-                <label>Name: </label>
-                <input type="text" ng-model="playerName" ng-disabled="controlsDisabled" />
-                <label>Game: </label>
-                <input type="text" ng-model="gameName" ng-disabled="controlsDisabled" />
-                <br /><br />
-                <input type="submit" value="StartOrJoinGame" ng-click="startOrJoinGame()" ng-disabled="controlsDisabled" />
-            </div>
-        </div>
-        <div class="span4">
-            <div ng-repeat="row in rows" class="row">
-                <div id="{{column.id}}" ng-repeat="column in row">
-                    <div ng-click="markUserClick(column)" class="cell">{{column.letter}}</div>
+    
+    <table class="table table-bordered">
+        <tr>
+            <td colspan="2">
+                <strong>Current Name:</strong> {{gameName}}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="span4">
+                    <div class="form-horizontal">
+                        <strong>Player Name: </strong> <input type="text" ng-model="playerName" ng-disabled="controlsDisabled" />
+                        <br /><br />
+                        <strong>Game Name: </strong> <input type="text" ng-model="gameName" ng-disabled="controlsDisabled" />
+                        <br /><br />
+                        <input type="button" value="StartOrJoinGame" ng-click="startOrJoinGame()" ng-disabled="controlsDisabled" />
+                    </div>
                 </div>
-            </div>
-        </div>
-        <div class="span4">
-            <table class="table table-bordered">
-                @*<tr>
-                    <td colspan="3">
-                        <strong>{{turnName}}</strong>
-                    </td>
-                </tr>*@
-                <tr>
-                    <td><strong>Game Name</strong></td>
-                    <td colspan="2">{{gameName}}</td>
-                </tr>
-                @*<tr>
-                    <td><strong>Players</strong></td>
-                    <td>{{playerName}}</td>
-                    <td>{{oppName}}</td>
-                </tr>
-                <tr>
-                    <td><strong>Scores</strong></td>
-                    <td>{{myScore}}</td>
-                    <td>{{oppScore}}</td>
-                </tr>*@
-            </table>
-        </div>
-    </div>
+            </td>
+            <td>
+                <div class="span4">
+                    <div ng-repeat="row in rows" class="row">
+                        <div id="{{column.id}}" ng-repeat="column in row">
+                            <div ng-click="markUserClick(column)" class="cell">{{column.letter}}</div>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
 </div>
